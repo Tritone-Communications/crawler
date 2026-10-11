@@ -19,6 +19,14 @@ int main() {
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
             result = curl_easy_perform(curl);
             std::cout << response << std::endl;
+            std::string tag = "<title>";
+            size_t startTitle = response.find(tag);
+            startTitle += tag.length();
+            tag = "</title>";
+            size_t endTitle = response.find(tag, startTitle);
+            std::string curPageTitle = response.substr(startTitle, endTitle - startTitle);
+            std::cout << "Current page title: " << curPageTitle << std::endl;
+
             curl_easy_cleanup(curl);
         }
     }
