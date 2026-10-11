@@ -1,6 +1,10 @@
 #include <iostream>
 #include <string>
 #include <curl/curl.h>
+#include <ctime>
+#include <fstream>
+using namespace std;
+
 size_t WriteCB(void* contents, size_t size, size_t nmemb, std::string* usrdat) {
     size_t totalsize = size * nmemb;
     usrdat->append(static_cast<char*>(contents), totalsize);
@@ -16,7 +20,8 @@ std::string getTagText(std::string startTag, std::string endTag, std::string inp
 }
 int main() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    std::string seeds[] = {"https://clutch.neocities.org/","https://boplaid.neocities.org/","https://frutigeraeroarchive.org/","https://forum.frutigeraeroarchive.org/"}; // make it read from a text file later
+    std::string seeds[] = {"https://clutch.neocities.org/","https://boplaid.neocities.org/","https://forum.frutigeraeroarchive.org/"}; // make it read from a text file later
+    ofstream Index("index.tif");
     for (std::string &seed : seeds) {
         CURL *curl = curl_easy_init();
         if (curl) {
@@ -29,8 +34,12 @@ int main() {
             std::cout << "URL: " << seed << std::endl;
             std::cout << "Title: " << getTagText("<title>","</title>",response) << std::endl;
             std::cout << "Snippet: " << getTagText("<p>","</p>",response) << std::endl;
+            std::time_t timestamp = std::time(nullptr);
 
+            Index << "<page><title>" << getTagText("<title>","</title>",response) << "</title><url>" << seed << "</url><snippet>" << getTagText("<p>","</p>",response) << "</snippet><timestamp>" << std::ctime(&timestamp) << "</timestamp></page>";
+            
             curl_easy_cleanup(curl);
         }
     }
+    Index.close();
 }
