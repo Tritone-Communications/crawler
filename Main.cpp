@@ -6,9 +6,17 @@ size_t WriteCB(void* contents, size_t size, size_t nmemb, std::string* usrdat) {
     usrdat->append(static_cast<char*>(contents), totalsize);
     return totalsize;
 }
+
+std::string getTagText(std::string startTag, std::string endTag, std::string inputHtml) {
+    size_t startTitle = inputHtml.find(startTag); // 'Title' because it was originally for titles. Sorry
+    startTitle += startTag.length();
+    size_t endTitle = inputHtml.find(endTag, startTitle);
+    std::string curPageTitle = inputHtml.substr(startTitle, endTitle - startTitle);
+    return curPageTitle;
+}
 int main() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    std::string seeds[] = {"https://clutch.neocities.org/"}; // make it read from a text file later
+    std::string seeds[] = {"https://clutch.neocities.org/","https://boplaid.neocities.org/","https://frutigeraeroarchive.org/","https://forum.frutigeraeroarchive.org/"}; // make it read from a text file later
     for (std::string &seed : seeds) {
         CURL *curl = curl_easy_init();
         if (curl) {
@@ -18,14 +26,9 @@ int main() {
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCB);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
             result = curl_easy_perform(curl);
-            std::cout << response << std::endl;
-            std::string tag = "<title>";
-            size_t startTitle = response.find(tag);
-            startTitle += tag.length();
-            tag = "</title>";
-            size_t endTitle = response.find(tag, startTitle);
-            std::string curPageTitle = response.substr(startTitle, endTitle - startTitle);
-            std::cout << "Current page title: " << curPageTitle << std::endl;
+            std::cout << "URL: " << seed << std::endl;
+            std::cout << "Title: " << getTagText("<title>","</title>",response) << std::endl;
+            std::cout << "Snippet: " << getTagText("<p>","</p>",response) << std::endl;
 
             curl_easy_cleanup(curl);
         }
