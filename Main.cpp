@@ -12,7 +12,8 @@ int main() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
     std::vector<std::string> seeds = {"https://clutch.neocities.org/","https://boplaid.neocities.org/","https://forum.frutigeraeroarchive.org/"}; // make it read from a text file later
     ofstream Index("index.tif");
-    for (std::string &seed : seeds) {
+    for (size_t i = 0; i < seeds.size(); i++) {
+        std::string seed = seeds[i];
         CURL *curl = curl_easy_init();
         if (curl) {
             CURLcode result;
@@ -37,8 +38,20 @@ int main() {
                     } else {
                         std::cout << "url in sub-url [seed]: " << href << std::endl;
                         if (href.rfind("/", 0) == 0 || href.rfind("./", 0) == 0) {
-                            std::string full = seed + href;
-                            seeds.push_back(seed);
+                            if (href.rfind("/", 0) == 0) {
+                                if (endsWith(stramp(seed,"://"),"/")) {
+                                    std::string full = seed + stramp(href,"/");
+                                    seeds.push_back(full);
+                                }
+                            } else if (href.rfind("./", 0) == 0) {
+                                if (endsWith(stramp(seed,"://"),"./")) {
+                                    std::string full = seed + stramp(href,"./");
+                                    seeds.push_back(full);
+                                }
+                            } else {
+                                std::string full = seed + href;
+                                seeds.push_back(full);
+                            }
                         }
                     }
                 }
