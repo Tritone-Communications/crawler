@@ -6,3 +6,4 @@ std::vector<std::string> getAllTagText(const std::string& startTag, const std::s
 std::vector<std::string> getAllHrefLinks(const std::string& inputHtml);
 std::string stramp(std::string inputString, std::string toRemove);
 bool endsWith(const std::string& inputString, const std::string& ending);
+bool isBlocked(std::string website);
