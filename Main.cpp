@@ -5,19 +5,35 @@
 #include <vector>
 #include <regex>
 #include <set>
+#include "robotstxt/robots.h"
 #include <fstream>
 #include "Helpers.h"
 using namespace std;
 
 int main() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    std::vector<std::string> seeds = {"https://clutch.neocities.org/","https://boplaid.neocities.org/","https://forum.frutigeraeroarchive.org/"}; // make it read from a text file later
+    std::vector<std::string> seeds;
+    std::ifstream TriSeed("tritone.seed");
+    if (!TriSeed.is_open()) {
+        std::cerr << "Error, couldn't open tritone.seed.\n";
+        return 1;
+    }
+    std::string TriLine;
+    while (std::getline(TriSeed, TriLine)) {
+        if (!TriLine.empty()) {
+            seeds.push_back(TriLine);
+        }
+    }
+
     std::set<std::string> visited;
-    ofstream Index("index.tif");
+    ofstream Index("index.tif", ios::app);
     for (size_t i = 0; i < seeds.size(); i++) {
         std::string seed = seeds[i];
         if (visited.count(seed)) continue;
         visited.insert(seed);
+        if (isBlocked(seed)) {
+            continue;
+        } else {
         CURL *curl = curl_easy_init();
         if (curl) {
             CURLcode result;
@@ -25,8 +41,10 @@ int main() {
             curl_easy_setopt(curl, CURLOPT_URL, seed.c_str());
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCB);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+            curl_easy_setopt(curl, CURLOPT_USERAGENT, "Tritone Communications World Wide Web Crawler (triserv.jet198@slmail.me)");
             result = curl_easy_perform(curl);
             curl_easy_cleanup(curl);
+            if (result == CURLE_OK) {
             std::cout << "URL: " << seed << std::endl;
             std::cout << "Title: " << getTagText("<title>","</title>",response) << std::endl;
             std::cout << "Snippet: " << getTagText("<p>","</p>",response) << std::endl;
@@ -67,6 +85,8 @@ int main() {
                 }
             }
             seeds.insert(seeds.end(), newlinks.begin(), newlinks.end());
+            }
+            }
         }
     }
     Index.close();
