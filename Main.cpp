@@ -88,6 +88,9 @@ int main() {
                         std::cout << "url NOT in sub-url: " << href << std::endl;
                     } else {
                         std::cout << "url in sub-url [seed]: " << href << std::endl;
+                        if (href.rfind("/", 0) == 0 || href.rfind("./", 0) == 0) {
+                            std::string full = seed + href;
+                        }
                     }
                 }
             }
