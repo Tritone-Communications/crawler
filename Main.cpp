@@ -4,6 +4,7 @@
 #include <ctime>
 #include <vector>
 #include <regex>
+#include <set>
 #include <fstream>
 #include "Helpers.h"
 using namespace std;
@@ -11,9 +12,12 @@ using namespace std;
 int main() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
     std::vector<std::string> seeds = {"https://clutch.neocities.org/","https://boplaid.neocities.org/","https://forum.frutigeraeroarchive.org/"}; // make it read from a text file later
+    std::set<std::string> visited;
     ofstream Index("index.tif");
     for (size_t i = 0; i < seeds.size(); i++) {
         std::string seed = seeds[i];
+        if (visited.count(seed)) continue;
+        visited.insert(seed);
         CURL *curl = curl_easy_init();
         if (curl) {
             CURLcode result;
@@ -22,6 +26,7 @@ int main() {
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCB);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
             result = curl_easy_perform(curl);
+            curl_easy_cleanup(curl);
             std::cout << "URL: " << seed << std::endl;
             std::cout << "Title: " << getTagText("<title>","</title>",response) << std::endl;
             std::cout << "Snippet: " << getTagText("<p>","</p>",response) << std::endl;
@@ -29,7 +34,9 @@ int main() {
 
             Index << "<page><title>" << getTagText("<title>","</title>",response) << "</title><url>" << seed << "</url><snippet>" << getTagText("<p>","</p>",response) << "</snippet><timestamp>" << timestamp << "</timestamp></page>\n";
             std::vector<std::string> allhref = getAllHrefLinks(response);
+            std::vector<std::string> newlinks;
             for (const auto& href : allhref) {
+                std::string fullurl = "";
                 if (href.find(seed) != std::string::npos) {
                     std::cout << "url in sub-url [seed]: " << href << std::endl;
                 } else {
@@ -41,23 +48,27 @@ int main() {
                             if (href.rfind("/", 0) == 0) {
                                 if (endsWith(stramp(seed,"://"),"/")) {
                                     std::string full = seed + stramp(href,"/");
-                                    seeds.push_back(full);
+                                    fullurl = full;
                                 }
                             } else if (href.rfind("./", 0) == 0) {
                                 if (endsWith(stramp(seed,"://"),"./")) {
                                     std::string full = seed + stramp(href,"./");
-                                    seeds.push_back(full);
+                                    fullurl = full;
                                 }
-                            } else {
-                                std::string full = seed + href;
-                                seeds.push_back(full);
                             }
-                        }
+                        } else {
+                                std::string full = seed + href;
+                                fullurl = full;
+                            }
                     }
                 }
+                if (!fullurl.empty() && !visited.count(fullurl)) {
+                    newlinks.push_back(fullurl);
+                }
             }
-            curl_easy_cleanup(curl);
+            seeds.insert(seeds.end(), newlinks.begin(), newlinks.end());
         }
     }
     Index.close();
+    curl_global_cleanup();
 }
