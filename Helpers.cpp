@@ -4,6 +4,7 @@
 #include <ctime>
 #include <vector>
 #include <regex>
+#include "robotstxt/robots.h"
 #include <fstream>
 using namespace std;
 
@@ -15,6 +16,9 @@ size_t WriteCB(void* contents, size_t size, size_t nmemb, std::string* usrdat) {
 
 std::string getTagText(std::string startTag, std::string endTag, std::string inputHtml) {
     size_t startTitle = inputHtml.find(startTag); // 'Title' because it was originally for titles. Sorry
+    if (startTitle == std::string::npos) {
+        return "";
+    }
     startTitle += startTag.length();
     size_t endTitle = inputHtml.find(endTag, startTitle);
     std::string curPageTitle = inputHtml.substr(startTitle, endTitle - startTitle);
@@ -62,6 +66,9 @@ std::vector<std::string> getAllHrefLinks(const std::string& inputHtml) {
 }
 
 std::string stramp(std::string inputString, std::string toRemove) {
+    if (inputString.empty() || inputString.size() < 7) {
+        return "";
+    }
     size_t rpos = inputString.find(toRemove);
     if (rpos != std::string::npos) {
         inputString.erase(rpos, toRemove.length());
@@ -72,4 +79,24 @@ std::string stramp(std::string inputString, std::string toRemove) {
 bool endsWith(const std::string& inputString, const std::string& ending) {
     if (ending.length() > inputString.length()) return false;
     return inputString.rfind(ending) == (inputString.length() - ending.length());
+}
+
+// Robots stuff
+bool isBlocked(std::string website) {
+    std::string robotsContent = "";
+    CURL* robotsCurl = curl_easy_init();
+    std::string robotsUrl = website + "robots.txt";
+    curl_easy_setopt(robotsCurl, CURLOPT_URL, robotsUrl);
+    curl_easy_setopt(robotsCurl, CURLOPT_WRITEFUNCTION, WriteCB);
+    curl_easy_setopt(robotsCurl, CURLOPT_WRITEDATA, &robotsContent);
+    curl_easy_setopt(robotsCurl, CURLOPT_USERAGENT, "Tritone Communications World Wide Web Crawler (triserv.jet198@slmail.me)");
+    CURLcode robotsResponse = curl_easy_perform(robotsCurl);
+    curl_easy_cleanup(robotsCurl);
+    if (robotsResponse != CURLE_OK) {
+        return false;
+    }
+    googlebot::RobotsMatcher matcher;
+    const std::vector<std::string> userAgentLand = { "Tritone Communications World Wide Web Crawler (triserv.jet198@slmail.me)" };
+    bool doICrawlIt = matcher.AllowedByRobots(robotsContent, &userAgentLand, website);
+    return !doICrawlIt;
 }
