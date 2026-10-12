@@ -2,6 +2,8 @@
 #include <string>
 #include <curl/curl.h>
 #include <ctime>
+#include <vector>
+#include <regex>
 #include <fstream>
 using namespace std;
 
@@ -17,6 +19,46 @@ std::string getTagText(std::string startTag, std::string endTag, std::string inp
     size_t endTitle = inputHtml.find(endTag, startTitle);
     std::string curPageTitle = inputHtml.substr(startTitle, endTitle - startTitle);
     return curPageTitle;
+}
+
+std::vector<std::string> getAllTagText(const std::string& startTag, const std::string& endTag, std::string& inputHtml) {
+    std::vector<std::string> results;
+    size_t pos = 0;
+    while (true) {
+        size_t start = inputHtml.find(startTag, pos);
+        if (start == std::string::npos) break;
+        start += startTag.length();
+        size_t end = inputHtml.find(endTag, start);
+        if (end == std::string::npos) break;
+        results.push_back(inputHtml.substr(start, end - start));
+        pos = end + endTag.length();
+    }
+    return results;
+}
+
+std::vector<std::string> getAllHrefLinks(const std::string& inputHtml) {
+    std::vector<std::string> results;
+    const std::regex anchorRegex(
+        R"(<a\b[^>]*>)",
+        std::regex_constants::icase
+    );
+    const std::regex hrefRegex(
+        R"(href\s*=\s*(['"])(.*?)\1)",
+        std::regex_constants::icase
+    );
+    auto begin = std::sregex_iterator(
+        inputHtml.begin(), inputHtml.end(), anchorRegex
+    );
+    auto end = std::sregex_iterator();
+    for (auto it = begin; it != end; ++it) {
+        std::string tag = it->str();
+        std::smatch match;
+        if (std::regex_search(tag, match, hrefRegex)) {
+            results.push_back(match[2].str());
+        }
+    }
+    
+    return results;
 }
 int main() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -37,7 +79,18 @@ int main() {
             std::time_t timestamp = std::time(nullptr);
 
             Index << "<page><title>" << getTagText("<title>","</title>",response) << "</title><url>" << seed << "</url><snippet>" << getTagText("<p>","</p>",response) << "</snippet><timestamp>" << std::ctime(&timestamp) << "</timestamp></page>";
-            
+            std::vector<std::string> allhref = getAllHrefLinks(response);
+            for (const auto& href : allhref) {
+                if (href.find(seed) != std::string::npos) {
+                    std::cout << "url in sub-url [seed]: " << href << std::endl;
+                } else {
+                    if (href.find("https://") != std::string::npos) {
+                        std::cout << "url NOT in sub-url: " << href << std::endl;
+                    } else {
+                        std::cout << "url in sub-url [seed]: " << href << std::endl;
+                    }
+                }
+            }
             curl_easy_cleanup(curl);
         }
     }
