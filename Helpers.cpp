@@ -60,3 +60,16 @@ std::vector<std::string> getAllHrefLinks(const std::string& inputHtml) {
     
     return results;
 }
+
+std::string stramp(std::string inputString, std::string toRemove) {
+    size_t rpos = inputString.find(toRemove);
+    if (rpos != std::string::npos) {
+        inputString.erase(rpos, toRemove.length());
+    }
+    return inputString;
+}
+
+bool endsWith(const std::string& inputString, const std::string& ending) {
+    if (ending.length() > inputString.length()) return false;
+    return inputString.rfind(ending) == (inputString.length() - ending.length());
+}
